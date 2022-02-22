@@ -21,7 +21,7 @@ map_export_dir = join('./viz/maps/', c.modelname)
 os.makedirs(map_export_dir, exist_ok=True)
 
 
-def compare_histogram(scores, classes, thresh=2.5, n_bins=64):
+def compare_histogram(scores, classes, thresh=2.0, n_bins=64):
     classes = deepcopy(classes)
     classes[classes > 0] = 1
     scores[scores > thresh] = thresh
@@ -74,7 +74,7 @@ def viz_roc(values, classes, class_names):
         export_roc(values_filtered, classes_filtered, export_name=class_names[filtered_indices[-1]])
 
 
-def viz_maps(maps, name, label):
+def viz_maps(maps, name, label,anomaly_score):
     img_path = img_paths[c.viz_sample_count]
     image = PIL.Image.open(img_path).convert('RGB')
     image = np.array(image)
@@ -90,6 +90,7 @@ def viz_maps(maps, name, label):
     if label > 0:
         plt.clf()
         plt.imshow(image)
+        plt.set_title('score :'+str(anomaly_score))
         plt.axis('off')
         plt.savefig(join(map_export_dir, name + '_orig.jpg'), bbox_inches='tight', pad_inches=0)
         plt.imshow(map_to_viz, cmap='viridis', alpha=0.3)
@@ -97,7 +98,7 @@ def viz_maps(maps, name, label):
     return
 
 
-def viz_map_array(maps, labels, n_col=8, subsample=4, max_figures=-1):
+def viz_map_array(maps, labels, anomaly_score, n_col=8, subsample=1, max_figures=-1):
     plt.clf()
     fig, subplots = plt.subplots(3, n_col)
 
@@ -126,6 +127,7 @@ def viz_map_array(maps, labels, n_col=8, subsample=4, max_figures=-1):
         map = t2np(F.interpolate(maps[i][None, None], size=image.shape[:2], mode=upscale_mode, align_corners=False))[
             0, 0]
         subplots[1][col_count].imshow(map)
+        subplots[1][col_count].set_title('anomaly score:'+str(anomaly_score[i]))
         subplots[1][col_count].axis('off')
         subplots[0][col_count].imshow(image)
         subplots[0][col_count].axis('off')
@@ -177,23 +179,24 @@ def evaluate(model, test_loader):
                     likelihood_grouped.append(torch.mean(z_grouped[-1] ** 2, dim=(1,)) / c.n_feat)
                 all_maps.extend(likelihood_grouped[0])
                 for i_l, l in enumerate(t2np(labels)):
-                    # viz_maps([lg[i_l] for lg in likelihood_grouped], c.modelname + '_' + str(c.viz_sample_count), label=l, show_scales = 1)
+                    viz_maps([lg[i_l] for lg in likelihood_grouped], c.modelname + '_' + str(c.viz_sample_count), label=l ,show_scales = 1)
                     c.viz_sample_count += 1
 
     anomaly_score = np.concatenate(anomaly_score)
     test_labels = np.concatenate(test_labels)
-
+    
     compare_histogram(anomaly_score, test_labels)
 
     class_names = [img_path.split('/')[-2] for img_path in img_paths]
     viz_roc(anomaly_score, test_labels, class_names)
 
     test_labels = np.array([1 if l > 0 else 0 for l in test_labels])
+    test_anomaly_score = np.array([1 if s > 0.6  else 0 for s in anomaly_score])
     auc_score = roc_auc_score(test_labels, anomaly_score)
     print('AUC:', auc_score)
 
     if localize:
-        viz_map_array(all_maps, test_labels)
+        viz_map_array(all_maps, test_labels,anomaly_score)
 
     return
 

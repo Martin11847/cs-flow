@@ -6,12 +6,12 @@ device = 'cuda'  # or 'cpu'
 
 # data settings
 dataset_path = "data/images"  # parent directory of datasets
-class_name = "dummy_data"  # dataset subdirectory
-modelname = "dummy_test"  # export evaluations/logs with this name
+class_name = "SO2"  # dataset subdirectory
+modelname = "SO2_test"  # export evaluations/logs with this name
 pre_extracted = True  # were feature preextracted with extract_features?
 
-img_size = (768, 768)  # image size of highest scale, others are //2, //4
-img_dims = [3] + list(img_size)
+img_size = (720, 720)  # image size of highest scale, others are //2, //4
+img_dims = [1] + list(img_size)
 
 # transformation settings
 norm_mean, norm_std = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
@@ -20,8 +20,8 @@ norm_mean, norm_std = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
 n_scales = 3  # number of scales at which features are extracted, img_size is the highest - others are //2, //4,...
 clamp = 3  # clamping parameter
 max_grad_norm = 1e0  # clamp gradients to this norm
-n_coupling_blocks = 4  # higher = more flexible = more unstable
-fc_internal = 1024  # * 4 # number of neurons in hidden layers of s-t-networks
+n_coupling_blocks = 3  # higher = more flexible = more unstable
+fc_internal = 512  # * 4 # number of neurons in hidden layers of s-t-networks
 lr_init = 2e-4  # inital learning rate
 use_gamma = True
 
@@ -30,13 +30,13 @@ n_feat = {"effnetB5": 304}[extractor]  # dependend from feature extractor
 map_size = (img_size[0] // 12, img_size[1] // 12)
 
 # dataloader parameters
-batch_size = 16  # actual batch size is this value multiplied by n_transforms(_test)
+batch_size = 12 # actual batch size is this value multiplied by n_transforms(_test)
 kernel_sizes = [3] * (n_coupling_blocks - 1) + [5]
 
 # total epochs = meta_epochs * sub_epochs
 # evaluation after <sub_epochs> epochs
-meta_epochs = 4  # total epochs = meta_epochs * sub_epochs
-sub_epochs = 15  # evaluate after this number of epochs
+meta_epochs = 5  # total epochs = meta_epochs * sub_epochs
+sub_epochs = 50  # evaluate after this number of epochs
 
 # output settings
 verbose = True
