@@ -3,9 +3,14 @@ import os
 import torch
 import torch.nn.functional as F
 from torch import nn
-from efficientnet_pytorch import EfficientNet
+import timm
+from timm.models import EfficientNet
+#from efficientnet_pytorch import EfficientNet
+import torchvision
 import config as c
 from freia_funcs import *
+import FrEIA.framework as Ff
+import FrEIA.modules as Fm
 
 WEIGHT_DIR = './weights'
 MODEL_DIR = './models/tmp'
@@ -24,7 +29,7 @@ def get_cs_flow_model(input_dim=c.n_feat):
             node_to_permute = [nodes[-1].out0, nodes[-1].out1, nodes[-1].out2]
 
         nodes.append(Node(node_to_permute, ParallelPermute, {'seed': k}, name=F'permute_{k}'))
-        nodes.append(Node([nodes[-1].out0, nodes[-1].out1, nodes[-1].out2], parallel_glow_coupling_layer,
+        nodes.append(Node([nodes[-1].out0, nodes[-1].out1, nodes[-1].out2], Parallel_glow_coupling_layer,
                           {'clamp': c.clamp, 'F_class': CrossConvolutions,
                            'F_args': {'channels_hidden': c.fc_internal,
                                       'kernel_size': c.kernel_sizes[k], 'block_no': k}},
@@ -36,13 +41,20 @@ def get_cs_flow_model(input_dim=c.n_feat):
     nf = ReversibleGraphNet(nodes, n_jac=3)
     return nf
 
+
+
+
 def nf_forward(model, inputs):
     return model(inputs), model.jacobian(run_forward=False)
 
 class FeatureExtractor(nn.Module):
     def __init__(self):
         super(FeatureExtractor, self).__init__()
-        self.feature_extractor = EfficientNet.from_pretrained('efficientnet-b5')
+        #self.feature_extractor = timm.create_model('resnet18', pretrained=True,num_classes=0, g)
+        #self.feature_extractor = timm.create_model('resnext101_32x8d', pretrained=True,num_classelobal_pool=''s=0, global_pool='')
+        model = torchvision.models.efficientnet_b5(pretrained=True)
+        self.feature_extractor = torchvision.models.feature_extraction.create_feature_extractor(model,{'features.6': 'feats'})
+        #self.feature_extractor = timm.create_model('convnext_tiny', pretrained=True)
 
     def eff_ext(self, x, use_layer=36):
         x = self.feature_extractor._swish(self.feature_extractor._bn0(self.feature_extractor._conv_stem(x)))
@@ -59,7 +71,11 @@ class FeatureExtractor(nn.Module):
         y = list()
         for s in range(c.n_scales):
             feat_s = F.interpolate(x, size=(c.img_size[0] // (2 ** s), c.img_size[1] // (2 ** s))) if s > 0 else x
-            feat_s = self.eff_ext(feat_s)
+            feat_s = self.feature_extractor(feat_s)['feats']
+            #feat_s = self.feature_extractor(feat_s)[:,:c.n_feat,:,:]
+            #feat_s = self.feature_extractor.forward_features(feat_s)
+            #feat_s = self.eff_ext(feat_s)
+            #print(feat_s.shape)
 
             y.append(feat_s)
         return y

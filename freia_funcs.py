@@ -7,6 +7,8 @@ from math import exp
 import numpy as np
 import config as c
 from utils import *
+from scipy.stats import special_ortho_group
+import warnings
 
 VERBOSE = False
 
@@ -153,10 +155,10 @@ class ParallelPermute(nn.Module):
         return input_dims
 
 
-class parallel_glow_coupling_layer(nn.Module):
+class Parallel_glow_coupling_layer(nn.Module):
     def __init__(self, dims_in, F_class=CrossConvolutions, F_args={},
                  clamp=5.):
-        super(parallel_glow_coupling_layer, self).__init__()
+        super(Parallel_glow_coupling_layer, self).__init__()
         channels = dims_in[0][0]
         self.ndims = len(dims_in[0])
 
@@ -568,3 +570,13 @@ class ReversibleGraphNet(nn.Module):
                                    "Node list?")
 
         return jacobian
+
+def subnet_conv_1(c_in, c_out):
+    return nn.Sequential(nn.Conv2d(c_in, c.subnet_conv_dim,   kernel_size=(1,1), padding='same'),
+                         nn.ReLU(),
+                         nn.Conv2d(c.subnet_conv_dim,  c_out, kernel_size=(1,1), padding='same'))
+
+def subnet_conv_3(c_in, c_out):
+    return nn.Sequential(nn.Conv2d(c_in, c.subnet_conv_dim,   kernel_size=(3,3), padding='same'),
+                         nn.ReLU(),
+                         nn.Conv2d(c.subnet_conv_dim,  c_out, kernel_size=(3,3), padding='same'))

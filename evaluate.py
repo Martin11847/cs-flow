@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from sklearn.metrics import roc_auc_score, roc_curve, auc
+from sklearn.metrics import roc_auc_score, roc_curve, auc, average_precision_score ,precision_recall_curve
 from tqdm import tqdm
 from model import load_model, FeatureExtractor
 import config as c
@@ -43,7 +43,7 @@ def compare_histogram(scores, classes, thresh=2.0, n_bins=64):
     plt.savefig(join(score_export_dir, 'score_histogram.png'), bbox_inches='tight', pad_inches=0)
 
 
-def viz_roc(values, classes, class_names):
+def viz_roc_pr(values, classes, class_names):
     def export_roc(values, classes, export_name='all'):
         # Compute ROC curve and ROC area for each class
         classes = deepcopy(classes)
@@ -64,15 +64,36 @@ def viz_roc(values, classes, class_names):
         plt.axis('equal')
         plt.xlim([0.0, 1.0])
         plt.ylim([0.0, 1.0])
-        plt.savefig(join(score_export_dir, export_name + '.png'))
+        plt.savefig(join(score_export_dir, export_name + '_ROC.png'))
+    
+    def export_pr(values, classes, export_name='all'):
+        # Compute ROC curve and ROC area for each class
+        classes = deepcopy(classes)
+        classes[classes > 0] = 1
+        pr, rec, _ = precision_recall_curve(classes, values)
+        ap_score = average_precision_score(classes, values)
+
+        plt.clf()
+        lw = 2
+        plt.plot(pr, rec, color='darkorange',
+                 lw=lw, label='AP score = %0.4f' % ap_score)
+        plt.xlabel('Precision')
+        plt.ylabel('Recall')
+        plt.title('Precision Recall for class ' + c.class_name)
+        plt.legend(loc="lower left")
+        plt.axis('equal')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.0])
+        plt.savefig(join(score_export_dir, export_name + '_AP.png'))
 
     export_roc(values, classes)
+    export_pr(values,classes)
     for cl in range(1, classes.max() + 1):
         filtered_indices = np.concatenate([np.where(classes == 0)[0], np.where(classes == cl)[0]])
         classes_filtered = classes[filtered_indices]
         values_filtered = values[filtered_indices]
         export_roc(values_filtered, classes_filtered, export_name=class_names[filtered_indices[-1]])
-
+        export_pr(values_filtered, classes_filtered, export_name=class_names[filtered_indices[-1]])
 
 def viz_maps(maps, name, label,anomaly_score):
     img_path = img_paths[c.viz_sample_count]
@@ -98,7 +119,7 @@ def viz_maps(maps, name, label,anomaly_score):
     return
 
 
-def viz_map_array(maps, labels, anomaly_score, n_col=8, subsample=1, max_figures=-1):
+def viz_map_array(maps, labels, anomaly_score, n_col=5, subsample=5, max_figures=-1):
     plt.clf()
     fig, subplots = plt.subplots(3, n_col)
 
@@ -127,7 +148,7 @@ def viz_map_array(maps, labels, anomaly_score, n_col=8, subsample=1, max_figures
         map = t2np(F.interpolate(maps[i][None, None], size=image.shape[:2], mode=upscale_mode, align_corners=False))[
             0, 0]
         subplots[1][col_count].imshow(map)
-        subplots[1][col_count].set_title('anomaly score:'+str(anomaly_score[i]))
+        subplots[1][col_count].set_title(f'anomaly score: {anomaly_score[i]:.3f}')
         subplots[1][col_count].axis('off')
         subplots[0][col_count].imshow(image)
         subplots[0][col_count].axis('off')
@@ -169,6 +190,7 @@ def evaluate(model, test_loader):
             z_concat = t2np(concat_maps(z))
             nll_score = np.mean(z_concat ** 2 / 2, axis=(1, 2))
             anomaly_score.append(nll_score)
+
             test_labels.append(t2np(labels))
 
             if localize:
@@ -179,19 +201,20 @@ def evaluate(model, test_loader):
                     likelihood_grouped.append(torch.mean(z_grouped[-1] ** 2, dim=(1,)) / c.n_feat)
                 all_maps.extend(likelihood_grouped[0])
                 for i_l, l in enumerate(t2np(labels)):
-                    viz_maps([lg[i_l] for lg in likelihood_grouped], c.modelname + '_' + str(c.viz_sample_count), label=l ,show_scales = 1)
+                    #viz_maps([lg[i_l] for lg in likelihood_grouped], c.modelname + '_' + str(c.viz_sample_count), label=l ,show_scales = 1)
                     c.viz_sample_count += 1
 
     anomaly_score = np.concatenate(anomaly_score)
+    test_anomaly_score = np.array([1 if s > 1.0  else 0 for s in anomaly_score])
+
     test_labels = np.concatenate(test_labels)
+    test_labels = np.array([1 if l > 0 else 0 for l in test_labels])
     
     compare_histogram(anomaly_score, test_labels)
 
     class_names = [img_path.split('/')[-2] for img_path in img_paths]
-    viz_roc(anomaly_score, test_labels, class_names)
-
-    test_labels = np.array([1 if l > 0 else 0 for l in test_labels])
-    test_anomaly_score = np.array([1 if s > 0.6  else 0 for s in anomaly_score])
+    viz_roc_pr(anomaly_score, test_labels, class_names)
+    
     auc_score = roc_auc_score(test_labels, anomaly_score)
     print('AUC:', auc_score)
 
@@ -200,8 +223,8 @@ def evaluate(model, test_loader):
 
     return
 
-train_set, test_set = load_datasets(c.dataset_path, c.class_name)
+train_set, test_set = load_datasets(c.dataset_path, c.class_name+str(c.training_set_size))
 img_paths = test_set.paths if c.pre_extracted else [p for p, l in test_set.samples]
 _, test_loader = make_dataloaders(train_set, test_set)
-mod = load_model(c.modelname)
+mod = load_model(c.modelname+str(c.training_set_size))
 evaluate(mod, test_loader)

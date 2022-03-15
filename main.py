@@ -7,6 +7,6 @@ import config as c
 from train import train
 from utils import load_datasets, make_dataloaders
 
-train_set, test_set = load_datasets(c.dataset_path, c.class_name)
+train_set, test_set = load_datasets(c.dataset_path, c.class_name+str(c.training_set_size))
 train_loader, test_loader = make_dataloaders(train_set, test_set)
-train(train_loader, test_loader)
+train(train_loader, test_loader,c.training_set_size)
