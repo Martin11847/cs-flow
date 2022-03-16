@@ -100,7 +100,7 @@ def load_datasets(dataset_path, class_name):
 
 
 class FeatureDataset(Dataset):
-    def __init__(self, root="data/features/" + c.class_name + '/', n_scales=c.n_scales, train=False):
+    def __init__(self, root="data/features/" + c.class_name+ str(c.training_set_size) + '/', n_scales=c.n_scales, train=False):
 
         super(FeatureDataset, self).__init__()
         self.data = list()
@@ -109,11 +109,12 @@ class FeatureDataset(Dataset):
         suffix = 'train' if train else 'test'
 
         for s in range(c.n_scales):
-            self.data.append(np.load(root + c.class_name + '_scale_' + str(s) + '_' + suffix + '.npy'))
+            self.data.append(np.load(root + c.class_name + str(c.training_set_size)+ '_scale_' + str(s) + '_' + suffix + '.npy'))
 
-        self.labels = np.load(os.path.join(root, c.class_name + '_labels.npy')) if not train else np.zeros(
+        self.labels = np.load(os.path.join(root, c.class_name  + str(c.training_set_size) + '_labels.npy')) if not train else np.zeros(
             [len(self.data[0])])
-        self.paths = np.load(os.path.join(root, c.class_name + '_image_paths.npy'))
+        self.paths = np.load(os.path.join(root, c.class_name + str(c.training_set_size) + '_image_paths.npy'))
+
         self.class_names = [img_path.split('/')[-2] for img_path in self.paths]
 
     def __len__(self):

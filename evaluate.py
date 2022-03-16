@@ -119,7 +119,7 @@ def viz_maps(maps, name, label,anomaly_score):
     return
 
 
-def viz_map_array(maps, labels, anomaly_score, n_col=5, subsample=5, max_figures=-1):
+def viz_map_array(maps, labels, anomaly_score, n_col=5, subsample=1, max_figures=-1):
     plt.clf()
     fig, subplots = plt.subplots(3, n_col)
 

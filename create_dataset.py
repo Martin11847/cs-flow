@@ -48,6 +48,6 @@ if c.to_create :
     class_name =  dataImages.name
     imNames = [im for im in dataImages.joinpath('good').glob('*')]
     train, test = train_test_split(imNames,train_size=c.training_set_size)
-    save_csv(c.class_name+'_trainig_set_'+str(c.training_set_size)+'.csv')
-    train = read_from_csv(c.class_name+'_trainig_set_'+str(c.training_set_size)+'.csv')
+    save_csv(c.class_name+str(c.training_set_size)+'_trainig_set.csv')
+    train = read_from_csv(c.class_name+str(c.training_set_size)+'_trainig_set.csv')
     mk_mvtecdataset_directory(c.dataset_path+'/'+c.class_name+str(c.training_set_size),train)

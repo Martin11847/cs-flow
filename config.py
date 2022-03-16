@@ -7,11 +7,11 @@ device = 'cuda'  # or 'cpu'
 # data settings
 orig_dataset_path = "../../Datasets/OD2_dataset/linear_color"
 dataset_path = "data/images"  # parent directory of datasets
-class_name = "MEMS_chip_"  # dataset subdirectory
-modelname = "NFFA_MEMS_chip_convnext_test"  # export evaluations/logs with this name
+class_name = "linear_color_"  # dataset subdirectory
+modelname = "linear_color_test"  # export evaluations/logs with this name
 to_create = True
 training_set_size = 50
-pre_extracted = False  # were feature preextracted with extract_features?
+pre_extracted = True  # were feature preextracted with extract_features?
 
 img_size = (1024, 768)  # image size of highest scale, others are //2, //4
 img_dims = [1] + list(img_size)
